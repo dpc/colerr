@@ -1,0 +1,7 @@
+[package]
+name = "colorout"
+version = "0.1.0"
+authors = ["Dawid Ciężarkiewicz <dawidc@nvidia.com>"]
+
+[dependencies]
+libc = "*"
