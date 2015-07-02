@@ -1,7 +1,19 @@
 [package]
-name = "colorout"
+name = "colerr"
 version = "0.1.0"
-authors = ["Dawid Ciężarkiewicz <dawidc@nvidia.com>"]
+authors = ["Dawid Ciężarkiewicz <dpc@dpc.pw>"]
 
 [dependencies]
 libc = "*"
+env_logger = "*"
+docopt = "*"
+rustc-serialize = "*"
+
+[dependencies.mio]
+git = "https://github.com/carllerche/mio"
+
+[dependencies.mioco]
+git = "https://github.com/dpc/mioco"
+
+[dependencies.nix]
+features = ["execvpe"]

@@ -1,14 +1,32 @@
-extern crate libc;
+#![feature(result_expect)]
+#![feature(convert)]
 
+extern crate rustc_serialize;
+extern crate libc;
+extern crate mio;
+extern crate mioco;
+extern crate nix;
+extern crate docopt;
+
+use docopt::Docopt;
 use std::os::unix::io::FromRawFd;
 use std::fs;
 use std::io;
-use std::io::{Read};
 use libc::funcs::posix88::unistd;
 use libc::c_int;
+use std::ffi::CString;
+use nix::unistd::execvpe;
+use nix::fcntl::{fcntl, FcntlArg, O_NONBLOCK};
+
+mod iomuxer;
+
+static USAGE: &'static str = "
+Usage:
+    colorout [--] <cmd>...
+";
 
 #[derive(Copy, Clone, Debug)]
-struct Fd(c_int);
+pub struct Fd(c_int);
 
 impl Fd {
 
@@ -40,11 +58,14 @@ impl Fd {
             _ => Ok(())
         }
     }
+
+    pub fn set_nonblocking(&self) {
+        fcntl(self.raw(), FcntlArg::F_SETFL(O_NONBLOCK)).expect("fcntl");
+    }
 }
 
-
-#[derive(Clone, Debug)]
-struct FdPipe {
+#[derive(Copy, Clone, Debug)]
+pub struct FdPipe {
     rx : Fd,
     tx : Fd,
 }
@@ -70,7 +91,16 @@ impl FdPipe {
     }
 }
 
+#[derive(Debug, RustcDecodable)]
+struct Args {
+    arg_cmd: Vec<String>,
+}
+
 fn main() {
+
+    let args : Args = Docopt::new(USAGE)
+        .and_then(|d| d.decode())
+        .unwrap_or_else(|e| e.exit());
 
     let stdout_pipe = FdPipe::new();
     let stderr_pipe = FdPipe::new();
@@ -79,31 +109,15 @@ fn main() {
     let child_pid = unsafe { unistd::fork() };
 
     if child_pid == 0 {
-        // Stdio colorizing child
-        println!("Child here!");
-        let mut tin = String::new();
-
-
+        // Output colorizing child
         stdin_pipe.rx().close().unwrap();
         stdout_pipe.tx().close().unwrap();
         stderr_pipe.tx().close().unwrap();
 
-//        let tx_file = stdout_pipe.tx().to_file();
-        let mut rx_file = stdout_pipe.rx().to_file();
+        iomuxer::start(stdin_pipe, stdout_pipe, stderr_pipe);
 
-        let mut buf : [u8; 128] = [0u8; 128];
-        'recv: loop {
-            match rx_file.read(&mut buf) {
-                Ok(0) => break,
-                Ok(size) => println!("Received {} bytes from parent", size),
-                Err(_) => break 'recv,
-            }
-        }
-        println!("Child done!");
     } else {
-        // Original program to be run
-        println!("Parent here!");
-
+        // The program to be run
         stdin_pipe.tx().close().unwrap();
         stdout_pipe.rx().close().unwrap();
         stderr_pipe.rx().close().unwrap();
@@ -116,9 +130,14 @@ fn main() {
         stdout_pipe.tx().close().unwrap();
         stderr_pipe.tx().close().unwrap();
 
-        println!("Parent line 1!");
-        println!("Parent line 2!");
-        println!("Parent line 3!");
-        println!("Parent done!");
-    }
+        let cmd = CString::new(args.arg_cmd[0].as_str()).unwrap();
+        let args_iter = args.arg_cmd.iter();
+        let args : Vec<CString> = args_iter.map(|s| CString::new(s.as_str()).unwrap()).collect();
+
+        execvpe(
+            &cmd,
+            args.as_slice(),
+            &[CString::new("").unwrap()],
+            ).expect("execve failed");
+        }
 }
