@@ -33,3 +33,14 @@ Resulting binary will be in `./target/release/colerr`. Just copy it to somewhere
 Usage:
     colorout [--] <cmd>...
 ```
+
+# Internals
+
+`colerr` works by spanning a IO-handling child process that takes care of
+colorizing output. The parent process `exec`-s the requested command with
+`stdin`, `stdout` and `stderr` routed to a child.
+
+This way `colerr` can be used as a drop-in replacement, as the `colerr`-ed PID
+will be the PID of the wrapped command. All signals etc. will be handled by the
+wrapped process itself, the only difference being a standard IO being handled
+by additional child process.
