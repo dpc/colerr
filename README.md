@@ -27,7 +27,7 @@ of important so I've mentioned it here.
 
 You need [rust][rust] compiler bundled with `cargo`. Then `cargo build --release` should do the job.
 
-Resulting binary will be in `./target/release/colerr`. Just copy it to somewhere from your `$PATH`.
+Resulting binary will be in `./target/release/colerr`. Just copy it to somewhere to your `$PATH`.
 
 ```
 Usage:
@@ -36,7 +36,7 @@ Usage:
 
 # Internals
 
-`colerr` works by spanning a IO-handling child process that takes care of
+`colerr` works by spawning a IO-handling child process that takes care of
 colorizing output. The parent process `exec`-s the requested command with
 `stdin`, `stdout` and `stderr` routed to a child.
 
