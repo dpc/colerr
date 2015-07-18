@@ -3,8 +3,11 @@ use mio::util::Slab;
 use mio::unix::{UnixStream};
 use std::os::unix::io::FromRawFd;
 use std::io;
+use nix;
+use std::os::unix::io::AsRawFd;
 
 use mioco;
+use mioco::TypedIOHandle;
 
 use FdPipe;
 use Fd;
@@ -15,7 +18,7 @@ struct IOMuxer {
     parent_stderr: Fd,
     own_stdin : Fd,
     own_stdout: Fd,
-    conns: Slab<mioco::ExternalHandle>,
+    conns: Slab<mioco::IOHandle>,
     running: i32,
 }
 
@@ -56,12 +59,12 @@ impl IOMuxer {
 
         let f = move |io : &mut mioco::CoroutineHandle| {
 
-            let mut from = io.handles()[0].clone();
-            let mut to = io.handles()[1].clone();
+            let mut from : TypedIOHandle<UnixStream> = io.handle(0);
+            let mut to : TypedIOHandle<UnixStream> = io.handle(1);
 
             let _ = io::copy(&mut from, &mut to);
 
-            to.with_raw_mut(|io| io.close_outbound().expect("close unbound"))
+            to.with_raw_mut(|io| nix::unistd::close(io.as_raw_fd()).expect("close()"))
         };
 
         builder.start(f, ev);
@@ -105,10 +108,11 @@ impl IOMuxer {
             use std::io::{Read, Write};
             let mut buf = [0u8; 1024];
             let mut last_source = 0xffff;
-            let from0 = io.handles()[0].clone();
-            let from1 = io.handles()[1].clone();
+            let mut from0 : TypedIOHandle<UnixStream> = io.handle(0);
+            let mut from1 : TypedIOHandle<UnixStream> = io.handle(1);
+            let mut to : TypedIOHandle<UnixStream> = io.handle(2);
             loop {
-                let source = io.select_read_from(&[&from0, &from1]).idx();
+                let source = io.select_read_from(&[0, 1]).idx();
 
                 let mut changed = false;
 
@@ -118,7 +122,7 @@ impl IOMuxer {
                 }
 
                 if changed {
-                    if let Err(_) = io.handles()[2].write_all(match source {
+                    if let Err(_) = to.write_all(match source {
                         0 => "\x1b[0m",
                         1 => "\x1b[31m",
                         _ => panic!("wrong source"),
@@ -127,12 +131,17 @@ impl IOMuxer {
                     }
                 }
 
-                let res = io.handles()[source].read(&mut buf);
+                let res = match source {
+                    0 => &mut from0,
+                    1 => &mut from1,
+                    _ => panic!(),
+                }.read(&mut buf);
+
                 match res {
                     Err(_) => break,
                     Ok(0) => /* EOF */ break,
                     Ok(size) => {
-                        match io.handles()[2].write_all(&mut buf[0..size]) {
+                        match to.write_all(&mut buf[0..size]) {
                             Ok(()) => { },
                             Err(_) => { break },
                         }
@@ -140,7 +149,7 @@ impl IOMuxer {
                 }
             }
 
-            let _ = io.handles()[2].write_all("\x1b[0m".as_bytes());
+            let _ = to.write_all("\x1b[0m".as_bytes());
         };
 
         builder.start(f, ev);
@@ -179,7 +188,7 @@ impl IOMuxer {
         self.conn_handle_finished(event_loop, finished);
     }
 
-    fn conn<'a>(&'a mut self, tok: Token) -> &'a mut mioco::ExternalHandle {
+    fn conn<'a>(&'a mut self, tok: Token) -> &'a mut mioco::IOHandle {
         &mut self.conns[tok]
     }
 }
