@@ -7,6 +7,7 @@ extern crate mio;
 extern crate mioco;
 extern crate nix;
 extern crate docopt;
+extern crate env_logger;
 
 use docopt::Docopt;
 use std::os::unix::io::FromRawFd;
@@ -97,6 +98,7 @@ struct Args {
 }
 
 fn main() {
+    env_logger::init().unwrap();
 
     let args : Args = Docopt::new(USAGE)
         .and_then(|d| d.decode())
