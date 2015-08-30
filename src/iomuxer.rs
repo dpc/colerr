@@ -37,11 +37,11 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
             let mut from0 = mioco.wrap(unsafe {UnixStream::from_raw_fd(parent_stdout.raw())});
             let mut from1 = mioco.wrap(unsafe {UnixStream::from_raw_fd(parent_stderr.raw())});
             let mut to = mioco.wrap(unsafe {UnixStream::from_raw_fd(own_stdout.raw())});
-            let mut last_source = from0.index();
+            let mut last_source = from0.id();
 
             let _ : io::Result<()> = (|| {
                 loop {
-                    let source = mioco.select_read_from(&[from0.index(), from1.index()]).index();
+                    let source = mioco.select_read_from(&[from0.id(), from1.id()]).id();
 
                     let mut changed = false;
 
@@ -52,9 +52,9 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
 
                     if changed {
                         if let Err(_) = to.write_all(
-                            if source == from0.index() {
+                            if source == from0.id() {
                                 "\x1b[0m"
-                            } else if source == from1.index() {
+                            } else if source == from1.id() {
                                 "\x1b[31m"
                             } else {
                                 panic!("wrong source")
@@ -64,9 +64,9 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
                         }
                     }
 
-                    let res = if source == from0.index() {
+                    let res = if source == from0.id() {
                         &mut from0
-                    } else if source == from1.index() {
+                    } else if source == from1.id() {
                         &mut from1
                     } else {
                         panic!()
