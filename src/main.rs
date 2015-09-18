@@ -1,4 +1,3 @@
-#![feature(result_expect)]
 #![feature(convert)]
 
 extern crate rustc_serialize;

@@ -8,9 +8,7 @@ libc = "*"
 env_logger = "*"
 docopt = "*"
 rustc-serialize = "*"
-
-[dependencies.mio]
-git = "https://github.com/carllerche/mio"
+mio = "0.4.*"
 
 [dependencies.mioco]
 git = "https://github.com/dpc/mioco"
