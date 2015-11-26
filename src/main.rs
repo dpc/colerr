@@ -12,7 +12,6 @@ use docopt::Docopt;
 use std::os::unix::io::FromRawFd;
 use std::fs;
 use std::io;
-use libc::funcs::posix88::unistd;
 use libc::c_int;
 use std::ffi::CString;
 use nix::unistd::execvpe;
@@ -37,7 +36,7 @@ impl Fd {
     }
 
     pub fn close(&self) -> io::Result<()> {
-        match unsafe { unistd::close(self.raw()) } {
+        match unsafe { libc::close(self.raw()) } {
             err if err < 0 => {
                 Err(io::Error::from_raw_os_error(err))
             },
@@ -51,7 +50,7 @@ impl Fd {
 
 
     pub fn dup_as(&self, to : Fd) -> io::Result<()> {
-        match unsafe { unistd::dup2(self.raw(), to.raw()) } {
+        match unsafe { libc::dup2(self.raw(), to.raw()) } {
             err if err < 0 => {
                 Err(io::Error::from_raw_os_error(err))
             },
@@ -74,7 +73,7 @@ impl FdPipe {
     fn new() -> FdPipe {
         let mut fds = [0 as c_int, 0 as c_int];
 
-        let ret = unsafe { unistd::pipe(fds.as_mut_ptr())};
+        let ret = unsafe { libc::pipe(fds.as_mut_ptr())};
         if ret < 0 {
             panic!("unistd::pipe failed: {}", ret);
         }
@@ -107,7 +106,7 @@ fn main() {
     let stderr_pipe = FdPipe::new();
     let stdin_pipe = FdPipe::new();
 
-    let child_pid = unsafe { unistd::fork() };
+    let child_pid = unsafe { libc::fork() };
 
     if child_pid == 0 {
         // Output colorizing child
