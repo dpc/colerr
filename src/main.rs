@@ -2,7 +2,6 @@
 
 extern crate rustc_serialize;
 extern crate libc;
-extern crate mio;
 extern crate mioco;
 extern crate nix;
 extern crate docopt;

@@ -1,4 +1,4 @@
-use mio::unix::{UnixStream};
+use mioco::mio::unix::{UnixStream};
 use std::os::unix::io::{FromRawFd, AsRawFd};
 use std::io;
 use nix;
@@ -21,27 +21,27 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
     own_stdin.set_nonblocking();
     own_stdout.set_nonblocking();
 
-    mioco::start(move |mioco| {
-        mioco.spawn(move |mioco| {
-            let mut from = mioco.wrap(unsafe {UnixStream::from_raw_fd(own_stdin.raw())});
-            let mut to = mioco.wrap(unsafe {UnixStream::from_raw_fd(parent_stdin.raw())});
+    mioco::start(move || {
+        mioco::spawn(move || {
+            let mut from = mioco::wrap(unsafe {UnixStream::from_raw_fd(own_stdin.raw())});
+            let mut to = mioco::wrap(unsafe {UnixStream::from_raw_fd(parent_stdin.raw())});
             try!(io::copy(&mut from, &mut to));
             to.with_raw_mut(|io| nix::unistd::close(io.as_raw_fd()).expect("close()"));
             Ok(())
         });
 
-        mioco.spawn(move |mioco| {
+        mioco::spawn(move || {
             use std::io::{Read, Write};
 
             let mut buf = [0u8; 1024];
-            let mut from0 = mioco.wrap(unsafe {UnixStream::from_raw_fd(parent_stdout.raw())});
-            let mut from1 = mioco.wrap(unsafe {UnixStream::from_raw_fd(parent_stderr.raw())});
-            let mut to = mioco.wrap(unsafe {UnixStream::from_raw_fd(own_stdout.raw())});
+            let mut from0 = mioco::wrap(unsafe {UnixStream::from_raw_fd(parent_stdout.raw())});
+            let mut from1 = mioco::wrap(unsafe {UnixStream::from_raw_fd(parent_stderr.raw())});
+            let mut to = mioco::wrap(unsafe {UnixStream::from_raw_fd(own_stdout.raw())});
             let mut last_source = from0.id();
 
             let _ : io::Result<()> = (|| {
                 loop {
-                    let source = mioco.select_read_from(&[from0.id(), from1.id()]).id();
+                    let source = mioco::select_read_from(&[from0.id(), from1.id()]).id();
 
                     let mut changed = false;
 
