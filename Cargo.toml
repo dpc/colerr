@@ -9,6 +9,4 @@ env_logger = "*"
 docopt = "*"
 rustc-serialize = "*"
 mioco = { git="https://github.com/dpc/mioco", rev="88b464e" }
-
-[dependencies.nix]
-features = ["execvpe"]
+nix = "*"

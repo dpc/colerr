@@ -13,7 +13,7 @@ use std::fs;
 use std::io;
 use libc::c_int;
 use std::ffi::CString;
-use nix::unistd::execvpe;
+use nix::unistd::execvp;
 use nix::fcntl::{fcntl, FcntlArg, O_NONBLOCK};
 
 mod iomuxer;
@@ -133,10 +133,9 @@ fn main() {
         let args_iter = args.arg_cmd.iter();
         let args : Vec<CString> = args_iter.map(|s| CString::new(s.as_str()).unwrap()).collect();
 
-        execvpe(
+        execvp(
             &cmd,
             args.as_slice(),
-            &[CString::new("").unwrap()],
             ).expect("execve failed");
         }
 }
