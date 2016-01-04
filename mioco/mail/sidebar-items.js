@@ -1,0 +1,1 @@
+initSidebarItems({"fn":[["mailbox","Create a Mailbox"]],"struct":[["MailboxInnerEnd","Mailbox receiving end"],["MailboxOuterEnd","Mailbox sending end"]]});
