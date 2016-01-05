@@ -1,4 +1,4 @@
-use mioco::mio::unix::{UnixStream};
+use mioco::unix::{UnixStream};
 use std::os::unix::io::{FromRawFd, AsRawFd};
 use std::io;
 use nix;
@@ -23,10 +23,10 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
 
     mioco::start(move || {
         mioco::spawn(move || {
-            let mut from = mioco::wrap(unsafe {UnixStream::from_raw_fd(own_stdin.raw())});
-            let mut to = mioco::wrap(unsafe {UnixStream::from_raw_fd(parent_stdin.raw())});
+            let mut from = unsafe {UnixStream::from_raw_fd(own_stdin.raw())};
+            let mut to = unsafe {UnixStream::from_raw_fd(parent_stdin.raw())};
             try!(io::copy(&mut from, &mut to));
-            to.with_raw_mut(|io| nix::unistd::close(io.as_raw_fd()).expect("close()"));
+            nix::unistd::close(to.as_raw_fd()).expect("close()");
             Ok(())
         });
 
@@ -34,14 +34,18 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
             use std::io::{Read, Write};
 
             let mut buf = [0u8; 1024];
-            let mut from0 = mioco::wrap(unsafe {UnixStream::from_raw_fd(parent_stdout.raw())});
-            let mut from1 = mioco::wrap(unsafe {UnixStream::from_raw_fd(parent_stderr.raw())});
-            let mut to = mioco::wrap(unsafe {UnixStream::from_raw_fd(own_stdout.raw())});
-            let mut last_source = from0.id();
+            let mut from0 = unsafe {UnixStream::from_raw_fd(parent_stdout.raw())};
+            let mut from1 = unsafe {UnixStream::from_raw_fd(parent_stderr.raw())};
+            let mut to = unsafe {UnixStream::from_raw_fd(own_stdout.raw())};
+            let mut last_source = 0;
 
             let _ : io::Result<()> = (|| {
                 loop {
-                    let source = mioco::select_read_from(&[from0.id(), from1.id()]).id();
+                    let mut source = 0;
+                    select!(
+                        from0:r => { source = 0 },
+                        from1:r => { source = 1 },
+                        );
 
                     let mut changed = false;
 
@@ -52,9 +56,9 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
 
                     if changed {
                         if let Err(_) = to.write_all(
-                            if source == from0.id() {
+                            if source == 0 {
                                 "\x1b[0m"
-                            } else if source == from1.id() {
+                            } else if source == 1 {
                                 "\x1b[31m"
                             } else {
                                 panic!("wrong source")
@@ -64,9 +68,9 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
                         }
                     }
 
-                    let res = if source == from0.id() {
+                    let res = if source == 0 {
                         &mut from0
-                    } else if source == from1.id() {
+                    } else if source == 1 {
                         &mut from1
                     } else {
                         panic!()
