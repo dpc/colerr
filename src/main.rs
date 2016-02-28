@@ -1,5 +1,3 @@
-#![feature(convert)]
-
 extern crate rustc_serialize;
 extern crate libc;
 #[macro_use]

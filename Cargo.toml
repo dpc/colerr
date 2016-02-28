@@ -8,5 +8,5 @@ libc = "*"
 env_logger = "*"
 docopt = "*"
 rustc-serialize = "*"
-mioco = { git="https://github.com/dpc/mioco", rev="c7ae47d" }
+mioco = { git="https://github.com/dpc/mioco", rev="a319d3e" }
 nix = "*"
