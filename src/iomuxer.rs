@@ -21,8 +21,8 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
     own_stdin.set_nonblocking();
     own_stdout.set_nonblocking();
 
-    mioco::start(move || {
-        mioco::spawn(move || {
+    mioco::start(move || -> io::Result<()> {
+        mioco::spawn(move ||  -> io::Result<()> {
             let mut from = unsafe {UnixStream::from_raw_fd(own_stdin.raw())};
             let mut to = unsafe {UnixStream::from_raw_fd(parent_stdin.raw())};
             try!(io::copy(&mut from, &mut to));
@@ -30,7 +30,7 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
             Ok(())
         });
 
-        mioco::spawn(move || {
+        mioco::spawn(move ||  -> io::Result<()> {
             use std::io::{Read, Write};
 
             let mut buf = [0u8; 1024];
@@ -39,12 +39,12 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
             let mut to = unsafe {UnixStream::from_raw_fd(own_stdout.raw())};
             let mut last_source = 0;
 
-            let _ : io::Result<()> = (|| {
+            let _ : io::Result<()> = (|| -> io::Result<()> {
                 loop {
-                    let mut source = 0;
+                    let mut source = 0u8;
                     select!(
-                        from0:r => { source = 0 },
-                        from1:r => { source = 1 },
+                        r:from0 => { source = 0; },
+                        r:from1 => { source = 1; },
                         );
 
                     let mut changed = false;
@@ -89,9 +89,8 @@ pub fn start(parent_stdin : FdPipe, parent_stdout : FdPipe, parent_stderr : FdPi
             })();
 
             let _ = try!(to.write_all("\x1b[0m".as_bytes()));
-
             Ok(())
         });
         Ok(())
-    });
+    }).unwrap().unwrap();
 }

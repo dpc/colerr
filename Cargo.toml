@@ -1,12 +1,20 @@
 [package]
 name = "colerr"
-version = "0.1.0"
+version = "1.0.0"
 authors = ["Dawid Ciężarkiewicz <dpc@dpc.pw>"]
+description = "colerr will wrap a given process and colorize it's standard error output."
+keywords = ["cli", "color", "colour", "tool"]
+license = "MPL-2.0"
+documentation = "https://github.com/dpc/colerr/"
+homepage = "https://github.com/dpc/colerr"
+repository = "https://github.com/dpc/colerr"
+readme = "README.md"
+
 
 [dependencies]
-libc = "*"
-env_logger = "*"
-docopt = "*"
-rustc-serialize = "*"
-mioco = { git="https://github.com/dpc/mioco", rev="a319d3e" }
-nix = "*"
+libc = "0.2.13"
+env_logger = "0.3.3"
+docopt = "0.6.18"
+rustc-serialize = "0.3.19"
+mioco = "0.7.0"
+nix = "0.6.0"
